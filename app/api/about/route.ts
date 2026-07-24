@@ -58,8 +58,9 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json(updated[0]);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to update content' }, { status: 500 });
+  } catch (error: any) {
+    console.error('About API Error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to update content' }, { status: 500 });
   }
 }
 

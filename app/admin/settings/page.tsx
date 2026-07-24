@@ -72,11 +72,11 @@ export default function SettingsPage() {
         alert('Settings saved successfully!');
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to save settings');
+        throw new Error(data.error || 'Failed to save settings');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Error saving settings');
+      alert(`Error: ${error.message}`);
     } finally {
       setSaving(false);
     }

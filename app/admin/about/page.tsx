@@ -103,11 +103,12 @@ export default function AboutContentPage() {
         alert(`${section} content saved successfully!`);
         fetchContent();
       } else {
-        throw new Error('Failed to save');
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Error saving content');
+      alert(`Error: ${error.message}`);
     } finally {
       setSaving(false);
     }

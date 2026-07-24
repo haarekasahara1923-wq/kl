@@ -43,7 +43,8 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json(updated);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Settings API Error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to save settings' }, { status: 500 });
   }
 }

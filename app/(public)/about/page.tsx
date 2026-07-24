@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'Learn about K.L. International School — our history, vision, mission, Director and Principal messages.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function AboutPage() {
   let director = null;
   let principal = null;

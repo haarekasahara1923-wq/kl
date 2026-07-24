@@ -89,8 +89,12 @@ export default function GalleryPageClient({ albums }: { albums: any[] }) {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {albumItems.map(item => (
-                      <div key={item.id} className="aspect-square relative rounded-xl overflow-hidden">
-                        <Image src={item.url} alt={item.caption || ''} fill className="object-cover hover:scale-105 transition-transform duration-300" />
+                      <div key={item.id} className="aspect-square relative rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                        {item.type === 'video' || item.url.match(/\.(mp4|webm)$/i) ? (
+                          <video src={item.url} controls className="w-full h-full object-cover" />
+                        ) : (
+                          <Image src={item.url} alt={item.caption || ''} fill className="object-cover hover:scale-105 transition-transform duration-300" />
+                        )}
                       </div>
                     ))}
                   </div>
