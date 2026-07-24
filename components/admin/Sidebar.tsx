@@ -31,7 +31,7 @@ export default function Sidebar() {
   const visibleItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <aside className="w-64 bg-[#0A1F44] text-white min-h-screen flex flex-col justify-between p-4 fixed left-0 top-0 bottom-0 z-40">
+    <aside className="w-64 bg-[#0A1F44] text-white h-screen flex flex-col justify-between p-4 fixed left-0 top-0 bottom-0 z-40 overflow-y-auto">
       <div>
         {/* Logo */}
         <div className="flex items-center gap-3 px-2 py-4 mb-6 border-b border-white/10">
