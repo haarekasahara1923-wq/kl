@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'View photos and videos from K.L. International School events, activities, and campus life.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function GalleryPage() {
   let albums: any[] = [];
   try {

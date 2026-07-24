@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'K.L. International School certifications, accreditations, and awards.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CertificationsPage() {
   let certs: any[] = [];
   try {

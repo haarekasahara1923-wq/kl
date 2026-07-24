@@ -38,18 +38,24 @@ export async function PUT(req: Request) {
     if (photoUrl !== undefined) setData.photoUrl = photoUrl;
     if (photoPublicId !== undefined) setData.photoPublicId = photoPublicId;
 
-    const updated = await db.insert(aboutContent).values({
-      section,
-      name,
-      designation,
-      message,
-      qualifications: qualifications || null,
-      photoUrl: photoUrl || null,
-      photoPublicId: photoPublicId || null,
-    }).onConflictDoUpdate({
-      target: aboutContent.section,
-      set: setData,
-    }).returning();
+    const existing = await db.query.aboutContent.findFirst({
+      where: eq(aboutContent.section, section),
+    });
+
+    let updated;
+    if (existing) {
+      updated = await db.update(aboutContent).set(setData).where(eq(aboutContent.section, section)).returning();
+    } else {
+      updated = await db.insert(aboutContent).values({
+        section,
+        name,
+        designation,
+        message,
+        qualifications: qualifications || null,
+        photoUrl: photoUrl || null,
+        photoPublicId: photoPublicId || null,
+      }).returning();
+    }
 
     return NextResponse.json(updated[0]);
   } catch (error) {

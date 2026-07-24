@@ -29,14 +29,17 @@ export async function PUT(req: Request) {
 
     const updated = [];
     for (const setting of newSettings) {
-      const res = await db.insert(settings).values({
-        key: setting.key,
-        value: setting.value,
-      }).onConflictDoUpdate({
-        target: settings.key,
-        set: { value: setting.value, updatedAt: new Date() },
-      }).returning();
-      updated.push(res[0]);
+      const existing = await db.query.settings.findFirst({
+        where: eq(settings.key, setting.key),
+      });
+
+      if (existing) {
+        const res = await db.update(settings).set({ value: setting.value, updatedAt: new Date() }).where(eq(settings.key, setting.key)).returning();
+        updated.push(res[0]);
+      } else {
+        const res = await db.insert(settings).values({ key: setting.key, value: setting.value }).returning();
+        updated.push(res[0]);
+      }
     }
 
     return NextResponse.json(updated);
