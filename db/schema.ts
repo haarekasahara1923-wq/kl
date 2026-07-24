@@ -20,6 +20,7 @@ export const payrollStatusEnum = pgEnum('payroll_status', ['pending', 'processed
 export const galleryTypeEnum = pgEnum('gallery_type', ['image', 'video']);
 export const enquiryStatusEnum = pgEnum('enquiry_status', ['new', 'in_progress', 'resolved', 'closed']);
 export const aboutSectionEnum = pgEnum('about_section', ['director', 'principal']);
+export const inventoryStatusEnum = pgEnum('inventory_status', ['in_stock', 'low_stock', 'out_of_stock']);
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable('users', {
@@ -215,6 +216,22 @@ export const settings = pgTable('settings', {
   key: varchar('key', { length: 100 }).notNull().unique(),
   value: text('value'),
   description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+export const inventory = pgTable('inventory', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  itemName: varchar('item_name', { length: 255 }).notNull(),
+  category: varchar('category', { length: 100 }),
+  quantity: integer('quantity').notNull().default(0),
+  unit: varchar('unit', { length: 50 }),
+  location: varchar('location', { length: 255 }),
+  status: inventoryStatusEnum('status').notNull().default('in_stock'),
+  minQuantity: integer('min_quantity').notNull().default(10),
+  lastRestocked: date('last_restocked'),
+  remarks: text('remarks'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

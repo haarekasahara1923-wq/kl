@@ -1,14 +1,220 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { Loader2, Plus, Package, AlertCircle, CheckCircle, Search, Edit2 } from 'lucide-react';
+import { format } from 'date-fns';
+
+type InventoryItem = {
+  id: string;
+  itemName: string;
+  category: string | null;
+  quantity: number;
+  unit: string | null;
+  location: string | null;
+  status: 'in_stock' | 'low_stock' | 'out_of_stock';
+  minQuantity: number;
+  lastRestocked: string | null;
+};
+
+const statusColors = {
+  in_stock: 'bg-green-100 text-green-700',
+  low_stock: 'bg-orange-100 text-orange-700',
+  out_of_stock: 'bg-red-100 text-red-700',
+};
+
+const statusLabels = {
+  in_stock: 'In Stock',
+  low_stock: 'Low Stock',
+  out_of_stock: 'Out of Stock',
+};
+
 export default function InventoryPage() {
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [newItem, setNewItem] = useState({
+    itemName: '', category: '', quantity: 0, unit: 'pcs', location: '', minQuantity: 10
+  });
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await fetch('/api/inventory');
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItem.itemName) return;
+    
+    // Auto calculate status based on quantity and minQuantity
+    let status = 'in_stock';
+    if (newItem.quantity === 0) status = 'out_of_stock';
+    else if (newItem.quantity <= newItem.minQuantity) status = 'low_stock';
+
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newItem, status }),
+      });
+
+      if (res.ok) {
+        setNewItem({ itemName: '', category: '', quantity: 0, unit: 'pcs', location: '', minQuantity: 10 });
+        setIsCreating(false);
+        fetchInventory();
+      } else {
+        alert('Failed to add item');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Failed to add item');
+    }
+  };
+
+  const filteredItems = items.filter(item => 
+    item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  if (loading) {
+    return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#FF7A00]" /></div>;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-[#0A1F44]">Inventory</h1>
-          <p className="text-gray-500 mt-1">Manage school supplies and assets.</p>
+          <h1 className="text-2xl font-bold text-[#0A1F44]">Inventory Management</h1>
+          <p className="text-gray-500 mt-1">Track school supplies, assets, and reorder levels.</p>
         </div>
+        <button
+          onClick={() => setIsCreating(!isCreating)}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5" /> {isCreating ? 'Cancel' : 'Add Item'}
+        </button>
       </div>
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-400">Inventory management interface coming soon.</p>
+
+      {isCreating && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add New Inventory Item</h2>
+          <form onSubmit={handleCreate} className="grid md:grid-cols-3 gap-4 max-w-4xl">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+              <input type="text" required className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.itemName} onChange={(e) => setNewItem({...newItem, itemName: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <input type="text" placeholder="e.g. Stationery, Electronics" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.category} onChange={(e) => setNewItem({...newItem, category: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quantity *</label>
+              <input type="number" required min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.quantity} onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 0})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+              <input type="text" placeholder="e.g. pcs, boxes, kgs" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.unit} onChange={(e) => setNewItem({...newItem, unit: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Min. Alert Quantity</label>
+              <input type="number" min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.minQuantity} onChange={(e) => setNewItem({...newItem, minQuantity: parseInt(e.target.value) || 0})} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
+              <input type="text" placeholder="e.g. Store Room 1, Shelf B" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.location} onChange={(e) => setNewItem({...newItem, location: e.target.value})} />
+            </div>
+            <div className="md:col-span-3 pt-2">
+              <button type="submit" className="btn-primary">Save Item</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input 
+              type="text" 
+              placeholder="Search items by name or category..." 
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 text-sm font-medium">
+            <span className="px-3 py-1 bg-red-50 text-red-700 rounded-full">{items.filter(i => i.status === 'out_of_stock').length} Out of Stock</span>
+            <span className="px-3 py-1 bg-orange-50 text-orange-700 rounded-full">{items.filter(i => i.status === 'low_stock').length} Low Stock</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50 text-gray-500 text-sm border-b border-gray-100">
+                <th className="p-4 font-semibold">Item Name</th>
+                <th className="p-4 font-semibold">Category</th>
+                <th className="p-4 font-semibold">Location</th>
+                <th className="p-4 font-semibold">In Stock</th>
+                <th className="p-4 font-semibold">Status</th>
+                <th className="p-4 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((item) => (
+                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
+                  <td className="p-4">
+                    <div className="font-semibold text-[#0A1F44]">{item.itemName}</div>
+                    <div className="text-xs text-gray-400">ID: {item.id.slice(0,8)}</div>
+                  </td>
+                  <td className="p-4 text-gray-600">{item.category || '-'}</td>
+                  <td className="p-4 text-gray-600">{item.location || '-'}</td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`font-bold ${item.quantity <= item.minQuantity ? 'text-red-500' : 'text-gray-800'}`}>
+                        {item.quantity}
+                      </span>
+                      <span className="text-gray-500 text-sm">{item.unit}</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-max ${statusColors[item.status]}`}>
+                      {item.status === 'in_stock' ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {statusLabels[item.status]}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button className="p-2 text-gray-400 hover:text-[#FF7A00] transition-colors rounded-lg hover:bg-orange-50">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              
+              {filteredItems.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center text-gray-500">
+                    <Package className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p>No inventory items found.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
