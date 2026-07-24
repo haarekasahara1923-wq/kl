@@ -1,36 +1,118 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# K.L. International School — Fullstack Web Application
 
-## Getting Started
+A full-stack mobile-first school website and role-based admin management system for **K.L. International School**, Gwalior (MP).
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Tech Stack
+
+- **Framework**: Next.js 14 (App Router, TypeScript)
+- **Database**: Neon PostgreSQL via Drizzle ORM
+- **Auth**: NextAuth v5 (Credentials authentication with bcrypt hashing)
+- **Media**: Cloudinary (Images, PDFs, media uploads)
+- **Styling**: Tailwind CSS + Framer Motion micro-animations
+- **Forms**: React Hook Form + Zod schema validation
+- **Deployment**: Vercel ready
+
+---
+
+## 📋 Features
+
+### Public Website
+- **Home**: Hero banner, animated mascot, stats, news ticker, feature highlights, CTAs
+- **About Us**: School heritage, vision/mission, Director & Principal messages
+- **Academics**: CBSE curriculum levels, smart classroom features, lab infrastructure
+- **Admissions**: 4-step admission workflow, interactive online enquiry form
+- **Gallery**: Photo albums with lightbox viewer
+- **Staff**: Faculty cards with designations and photos
+- **Certifications**: Accreditation cards with downloadable documents
+- **Contact**: Location details, interactive contact form, WhatsApp redirect button
+
+### Role-Based Admin Panel (`/admin`)
+- **Dashboard**: Summary metrics (Students, Staff, Revenue, Pending Enquiries)
+- **Students**: Full CRUD management, class/section filtering
+- **Fees**: Payment records, fee structures, status tracking
+- **Staff & Payroll**: Faculty directory and payroll management
+- **Gallery Admin**: Album creation and Cloudinary photo management
+- **Admissions Enquiries**: Review & manage incoming admission applications
+- **Contact Messages**: Respond to incoming general enquiries
+- **Certifications**: Upload & publish school certificates
+- **Settings**: Manage school contact info, phone, email & WhatsApp number
+
+---
+
+## 🛠️ Environment Variables Setup
+
+Copy `.env.example` to `.env.local` and configure your credentials:
+
+```env
+# Neon Postgres Connection URL
+DATABASE_URL=postgresql://user:password@your-neon-host/dbname?sslmode=require
+
+# NextAuth v5 Secret (generate using openssl rand -base64 32)
+NEXTAUTH_SECRET=your-super-secret-key-at-least-32-chars
+NEXTAUTH_URL=http://localhost:3000
+
+# Cloudinary Setup
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# School Contact Redirects
+ADMIN_WHATSAPP_NUMBER=918962678915
+NEXT_PUBLIC_SITE_URL=https://klinternational.space
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🗄️ Database Setup & Drizzle Migrations
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Generate Drizzle Migrations**:
+   ```bash
+   npx drizzle-kit generate
+   ```
 
-## Learn More
+2. **Push Migration to Neon Postgres**:
+   ```bash
+   npx drizzle-kit push
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **Seed Default Admin User & Sample Content**:
+   ```bash
+   npx tsx db/seed.ts
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔑 Default Login Credentials
 
-## Deploy on Vercel
+After running `npx tsx db/seed.ts`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Role | Username | Password |
+|---|---|---|
+| Admin | `admin` | `Admin@123` |
+| Accountant | `accountant` | `Accountant@123` |
+| Operations | `operations` | `Operations@123` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 💻 Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run dev server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the public site or [http://localhost:3000/auth/login](http://localhost:3000/auth/login) for the admin portal.
+
+---
+
+## 🌐 Deploying to Vercel
+
+1. Push codebase to GitHub repo.
+2. Import project into Vercel Dashboard.
+3. Configure all environment variables in Vercel settings.
+4. Click **Deploy**.

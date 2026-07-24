@@ -1,27 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --orange: #FF7A00;
+  --orange-light: #FF9A3C;
+  --orange-dark: #E06500;
+  --navy: #0A1F44;
+  --navy-light: #1a3a6b;
+  --navy-dark: #060f22;
+  --cream: #FFF8F0;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', sans-serif;
+  background: #ffffff;
+  color: #1a1a2e;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#FF7A00] hover:bg-[#E06500] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-orange-500/30 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-outline {
+    @apply border-2 border-[#FF7A00] text-[#FF7A00] hover:bg-[#FF7A00] hover:text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300;
+  }
+
+  .btn-navy {
+    @apply bg-[#0A1F44] hover:bg-[#1a3a6b] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300;
+  }
+
+  .card-glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl;
+  }
+
+  .gradient-orange-navy {
+    background: linear-gradient(135deg, #FF7A00 0%, #0A1F44 100%);
+  }
+
+  .gradient-navy-orange {
+    background: linear-gradient(135deg, #0A1F44 0%, #FF7A00 100%);
+  }
+
+  .section-title {
+    @apply font-playfair text-4xl md:text-5xl font-bold text-[#0A1F44];
+  }
+
+  .section-subtitle {
+    @apply text-[#FF7A00] font-semibold text-sm uppercase tracking-widest;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#FF7A00] to-[#0A1F44];
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00]/20 outline-none transition-all duration-200 bg-white text-gray-800 placeholder:text-gray-400;
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
   }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce 2s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #FF7A00;
+  border-radius: 3px;
 }
