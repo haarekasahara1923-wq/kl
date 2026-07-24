@@ -62,7 +62,9 @@ export default function HomePage() {
 
   return (
     <>
-      <NewsTicker />
+      <div className="mt-16 lg:mt-20">
+        <NewsTicker />
+      </div>
 
       {/* Hero Section */}
       <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-[#0A1F44] via-[#1a3a6b] to-[#0A1F44]">
