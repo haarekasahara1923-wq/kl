@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { admissionEnquiries } from '@/db/schema';
 import { admissionEnquirySchema } from '@/lib/validations';
+import { desc, eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
+
+export async function GET() {
+  const session = await auth();
+  if (!session || !['admin', 'operations'].includes((session.user as any).role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const enquiries = await db.query.admissionEnquiries.findMany({
+      orderBy: [desc(admissionEnquiries.createdAt)],
+    });
+    return NextResponse.json(enquiries);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch admissions' }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {

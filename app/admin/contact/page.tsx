@@ -1,14 +1,154 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { Loader2, MessageSquare, Mail, Phone, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { format } from 'date-fns';
+
+type Enquiry = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  subject: string | null;
+  message: string;
+  status: 'new' | 'in_progress' | 'resolved' | 'closed';
+  createdAt: string;
+};
+
+const statusColors = {
+  new: 'bg-blue-100 text-blue-700',
+  in_progress: 'bg-orange-100 text-orange-700',
+  resolved: 'bg-green-100 text-green-700',
+  closed: 'bg-gray-100 text-gray-700',
+};
+
+const statusLabels = {
+  new: 'New',
+  in_progress: 'In Progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
 export default function ContactEnquiriesPage() {
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchEnquiries();
+  }, []);
+
+  const fetchEnquiries = async () => {
+    try {
+      const res = await fetch('/api/contact');
+      if (res.ok) {
+        const data = await res.json();
+        setEnquiries(data);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    setUpdating(id);
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        fetchEnquiries();
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Failed to update status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#FF7A00]" /></div>;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h1 className="text-2xl font-bold text-[#0A1F44]">Contact Enquiries</h1>
-          <p className="text-gray-500 mt-1">Manage messages and inquiries from the website.</p>
+          <p className="text-gray-500 mt-1">Manage and respond to messages from the website contact form.</p>
+        </div>
+        <div className="bg-orange-50 text-[#FF7A00] font-semibold px-4 py-2 rounded-xl">
+          {enquiries.filter(e => e.status === 'new').length} New Messages
         </div>
       </div>
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-400">Contact enquiries interface coming soon.</p>
+
+      <div className="space-y-4">
+        {enquiries.map((enquiry) => (
+          <div key={enquiry.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-lg font-bold text-[#0A1F44]">{enquiry.name}</h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[enquiry.status]}`}>
+                    {statusLabels[enquiry.status]}
+                  </span>
+                </div>
+                
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
+                  {enquiry.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <a href={`mailto:${enquiry.email}`} className="hover:text-[#FF7A00] transition-colors">{enquiry.email}</a>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <a href={`tel:${enquiry.phone}`} className="hover:text-[#FF7A00] transition-colors">{enquiry.phone}</a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    {format(new Date(enquiry.createdAt), 'MMM dd, yyyy h:mm a')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <select
+                  value={enquiry.status}
+                  onChange={(e) => updateStatus(enquiry.id, e.target.value)}
+                  disabled={updating === enquiry.id}
+                  className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00] disabled:opacity-50 bg-white"
+                >
+                  <option value="new">Mark as New</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+                {updating === enquiry.id && <Loader2 className="w-5 h-5 animate-spin text-[#FF7A00] mt-2" />}
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50/50">
+              {enquiry.subject && (
+                <p className="font-semibold text-gray-800 mb-2">Subject: {enquiry.subject}</p>
+              )}
+              <div className="bg-white p-4 rounded-xl border border-gray-100 text-gray-700 whitespace-pre-wrap shadow-sm">
+                {enquiry.message}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {enquiries.length === 0 && !loading && (
+          <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No contact enquiries found.</p>
+          </div>
+        )}
       </div>
     </div>
   );
