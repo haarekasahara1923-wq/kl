@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { db } from '@/db';
 import { galleryAlbums } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import GalleryPageClient from './GalleryPageClient';
 
 export const metadata: Metadata = {
@@ -14,11 +14,13 @@ export const dynamic = 'force-dynamic';
 export default async function GalleryPage() {
   let albums: any[] = [];
   try {
-    const rawAlbums = await db.query.galleryAlbums.findMany({
-      where: eq(galleryAlbums.isPublished, true),
-      with: { items: { limit: 1 } },
-    });
-    albums = rawAlbums;
-  } catch {}
+    albums = await db
+      .select()
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.isPublished, true))
+      .orderBy(desc(galleryAlbums.createdAt));
+  } catch (e) {
+    console.error('[Gallery Page] Failed to load albums:', e);
+  }
   return <GalleryPageClient albums={albums} />;
 }

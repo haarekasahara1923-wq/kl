@@ -12,13 +12,23 @@ export default function GalleryPageClient({ albums }: { albums: any[] }) {
 
   const openAlbum = async (album: any) => {
     setSelected(album);
+    setAlbumItems([]);
     setLoadingItems(true);
     try {
       const res = await fetch(`/api/gallery/albums/${album.id}/items`);
+      if (!res.ok) {
+        console.error('[Gallery] Failed to fetch items, status:', res.status);
+        setAlbumItems([]);
+        return;
+      }
       const data = await res.json();
-      setAlbumItems(data.items || []);
-    } catch {}
-    setLoadingItems(false);
+      setAlbumItems(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      console.error('[Gallery] Error loading album items:', err);
+      setAlbumItems([]);
+    } finally {
+      setLoadingItems(false);
+    }
   };
 
   return (
