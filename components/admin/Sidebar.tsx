@@ -5,7 +5,7 @@ import { signOut, useSession } from 'next-auth/react';
 import {
   LayoutDashboard, Users, CreditCard, UserCheck, Images,
   FileText, MessageSquare, Award, Info, Settings, LogOut,
-  GraduationCap, ChevronRight, Package
+  GraduationCap, ChevronRight, Package, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ const navItems = [
   { href: '/admin/certifications', label: 'Certifications', icon: Award, roles: ['admin', 'operations'] },
   { href: '/admin/inventory', label: 'Inventory', icon: Package, roles: ['admin', 'operations', 'inventory'] },
   { href: '/admin/about', label: 'About Content', icon: Info, roles: ['admin', 'operations'] },
+  { href: '/admin/users', label: 'User Management', icon: Shield, roles: ['admin'] },
   { href: '/admin/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
 ];
 

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, Award, Loader2, Upload, ExternalLink } from 'lucide-react';
+import { Plus, Award, Loader2, Upload, ExternalLink, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 type Certification = {
@@ -95,6 +95,20 @@ export default function CertificationsPage() {
     } catch (error) {
       console.error(error);
       alert('Failed to save certification');
+    }
+  };
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete the certification "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/certifications/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCerts(prev => prev.filter(c => c.id !== id));
+      } else {
+        alert('Failed to delete certification');
+      }
+    } catch {
+      alert('Network error. Please try again.');
     }
   };
 
@@ -209,6 +223,15 @@ export default function CertificationsPage() {
               {cert.issuedBy && <p className="text-sm text-gray-500">Issued by: {cert.issuedBy}</p>}
               {cert.issuedDate && <p className="text-sm text-gray-400 mt-1">Date: {format(new Date(cert.issuedDate), 'MMM dd, yyyy')}</p>}
               {cert.description && <p className="text-sm text-gray-600 mt-3 line-clamp-2">{cert.description}</p>}
+              
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={() => handleDelete(cert.id, cert.title)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
             </div>
           </div>
         ))}

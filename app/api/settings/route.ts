@@ -15,8 +15,8 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   const session = await auth();
-  if (!session || session.user?.email !== 'admin@klis.space') {
-    return NextResponse.json({ error: 'Unauthorized. Only superadmin can modify settings.' }, { status: 401 });
+  if (!session || (session.user as any).role !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized. Only admins can modify settings.' }, { status: 401 });
   }
 
   try {

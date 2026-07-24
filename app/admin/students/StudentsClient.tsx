@@ -1,24 +1,31 @@
 'use client';
 import { useState } from 'react';
-import { Plus, Search, Trash2, Edit, UserPlus, Phone, Mail } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, UserPlus, Phone, X, Save, Loader2 } from 'lucide-react';
 import { CLASS_OPTIONS, formatDate } from '@/lib/utils';
+
+const defaultForm = {
+  admissionNo: '',
+  name: '',
+  class: 'Class 1',
+  section: 'A',
+  rollNo: '',
+  parentName: '',
+  parentPhone: '',
+  parentEmail: '',
+  address: '',
+  dateOfBirth: '',
+  gender: '',
+  bloodGroup: '',
+};
 
 export default function StudentsClient({ students: initialStudents }: { students: any[] }) {
   const [studentsList, setStudentsList] = useState(initialStudents);
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    admissionNo: '',
-    name: '',
-    class: 'Class 1',
-    section: 'A',
-    rollNo: '',
-    parentName: '',
-    parentPhone: '',
-    parentEmail: '',
-    address: '',
-  });
+  const [editingStudent, setEditingStudent] = useState<any | null>(null);
+  const [formData, setFormData] = useState({ ...defaultForm });
+  const [saving, setSaving] = useState(false);
 
   const filtered = studentsList.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.admissionNo.toLowerCase().includes(search.toLowerCase());
@@ -26,32 +33,105 @@ export default function StudentsClient({ students: initialStudents }: { students
     return matchesSearch && matchesClass;
   });
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/students', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (res.ok) {
-        const newStudent = await res.json();
-        setStudentsList([newStudent, ...studentsList]);
-        setIsModalOpen(false);
-        setFormData({ admissionNo: '', name: '', class: 'Class 1', section: 'A', rollNo: '', parentName: '', parentPhone: '', parentEmail: '', address: '' });
-      }
-    } catch {}
+  const openAdd = () => {
+    setEditingStudent(null);
+    setFormData({ ...defaultForm });
+    setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this student record?')) return;
+  const openEdit = (student: any) => {
+    setEditingStudent(student);
+    setFormData({
+      admissionNo: student.admissionNo || '',
+      name: student.name || '',
+      class: student.class || 'Class 1',
+      section: student.section || '',
+      rollNo: student.rollNo || '',
+      parentName: student.parentName || '',
+      parentPhone: student.parentPhone || '',
+      parentEmail: student.parentEmail || '',
+      address: student.address || '',
+      dateOfBirth: student.dateOfBirth || '',
+      gender: student.gender || '',
+      bloodGroup: student.bloodGroup || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingStudent(null);
+    setFormData({ ...defaultForm });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (editingStudent) {
+        // EDIT existing student
+        const res = await fetch(`/api/students/${editingStudent.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setStudentsList(prev => prev.map(s => s.id === editingStudent.id ? { ...s, ...updated } : s));
+          closeModal();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to update student');
+        }
+      } else {
+        // CREATE new student
+        const res = await fetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (res.ok) {
+          const newStudent = await res.json();
+          setStudentsList(prev => [newStudent, ...prev]);
+          closeModal();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to add student');
+        }
+      }
+    } catch {
+      alert('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}'s record?`)) return;
     try {
       const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        setStudentsList(studentsList.filter(s => s.id !== id));
+        setStudentsList(prev => prev.filter(s => s.id !== id));
+      } else {
+        alert('Failed to delete student');
       }
-    } catch {}
+    } catch {
+      alert('Network error. Please try again.');
+    }
   };
+
+  const field = (label: string, key: keyof typeof formData, type = 'text', required = false) => (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}{required && ' *'}</label>
+      <input
+        type={type}
+        required={required}
+        value={formData[key]}
+        onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
+        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00]/20 outline-none transition-colors"
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -61,7 +141,7 @@ export default function StudentsClient({ students: initialStudents }: { students
           <p className="text-gray-500 text-sm">Manage student records, admissions, and details.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openAdd}
           className="btn-primary flex items-center gap-2 text-sm shrink-0"
         >
           <UserPlus className="w-4 h-4" /> Add New Student
@@ -88,6 +168,19 @@ export default function StudentsClient({ students: initialStudents }: { students
           <option value="">All Classes</option>
           {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {CLASS_OPTIONS.slice(0, 4).map(cls => {
+          const count = studentsList.filter(s => s.class === cls).length;
+          return (
+            <div key={cls} className="bg-white rounded-xl border border-gray-100 p-3 text-center shadow-sm">
+              <p className="text-xl font-bold text-[#0A1F44]">{count}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{cls}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -124,8 +217,19 @@ export default function StudentsClient({ students: initialStudents }: { students
                       <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" /> {s.parentPhone}</p>
                     </td>
                     <td className="px-6 py-4 text-xs text-gray-500">{formatDate(s.admissionDate)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleDelete(s.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(s)}
+                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit student"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(s.id, s.name)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete student"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
@@ -135,31 +239,66 @@ export default function StudentsClient({ students: initialStudents }: { students
             </tbody>
           </table>
         </div>
+        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/50 text-xs text-gray-400">
+          Showing {filtered.length} of {studentsList.length} students
+        </div>
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4">
-            <h3 className="font-playfair text-xl font-bold text-[#0A1F44]">Add New Student</h3>
-            <form onSubmit={handleCreate} className="space-y-3">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="font-playfair text-xl font-bold text-[#0A1F44]">
+                {editingStudent ? 'Edit Student Record' : 'Add New Student'}
+              </h3>
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <input required placeholder="Admission No *" value={formData.admissionNo} onChange={e => setFormData({ ...formData, admissionNo: e.target.value })} className="input-field text-sm" />
-                <input required placeholder="Student Full Name *" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="input-field text-sm" />
+                {field('Admission No', 'admissionNo', 'text', true)}
+                {field('Student Full Name', 'name', 'text', true)}
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <select value={formData.class} onChange={e => setFormData({ ...formData, class: e.target.value })} className="input-field text-sm">
-                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <input placeholder="Section" value={formData.section} onChange={e => setFormData({ ...formData, section: e.target.value })} className="input-field text-sm" />
-                <input placeholder="Roll No" value={formData.rollNo} onChange={e => setFormData({ ...formData, rollNo: e.target.value })} className="input-field text-sm" />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Class *</label>
+                  <select
+                    value={formData.class}
+                    onChange={e => setFormData(prev => ({ ...prev, class: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-[#FF7A00] outline-none bg-white"
+                  >
+                    {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                {field('Section', 'section')}
+                {field('Roll No', 'rollNo')}
               </div>
-              <input required placeholder="Parent Name *" value={formData.parentName} onChange={e => setFormData({ ...formData, parentName: e.target.value })} className="input-field text-sm" />
-              <input required placeholder="Parent Phone *" value={formData.parentPhone} onChange={e => setFormData({ ...formData, parentPhone: e.target.value })} className="input-field text-sm" />
-              <input placeholder="Parent Email" value={formData.parentEmail} onChange={e => setFormData({ ...formData, parentEmail: e.target.value })} className="input-field text-sm" />
+              <div className="grid grid-cols-3 gap-3">
+                {field('Gender', 'gender')}
+                {field('Blood Group', 'bloodGroup')}
+                {field('Date of Birth', 'dateOfBirth', 'date')}
+              </div>
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">Parent / Guardian Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {field('Parent Name', 'parentName', 'text', true)}
+                  {field('Parent Phone', 'parentPhone', 'tel', true)}
+                </div>
+                {field('Parent Email', 'parentEmail', 'email')}
+              </div>
+              {field('Address', 'address')}
+
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm border rounded-xl">Cancel</button>
-                <button type="submit" className="btn-primary text-sm px-5 py-2">Save Student</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Saving...' : (editingStudent ? 'Save Changes' : 'Add Student')}
+                </button>
               </div>
             </form>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Loader2, Plus, Package, AlertCircle, CheckCircle, Search, Edit2 } from 'lucide-react';
+import { Loader2, Plus, Package, AlertCircle, CheckCircle, Search, Edit2, Trash2, X, Save } from 'lucide-react';
 import { format } from 'date-fns';
 
 type InventoryItem = {
@@ -13,6 +13,7 @@ type InventoryItem = {
   status: 'in_stock' | 'low_stock' | 'out_of_stock';
   minQuantity: number;
   lastRestocked: string | null;
+  remarks: string | null;
 };
 
 const statusColors = {
@@ -27,15 +28,19 @@ const statusLabels = {
   out_of_stock: 'Out of Stock',
 };
 
+const defaultItem = {
+  itemName: '', category: '', quantity: 0, unit: 'pcs', location: '', minQuantity: 10, remarks: ''
+};
+
 export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [newItem, setNewItem] = useState({
-    itemName: '', category: '', quantity: 0, unit: 'pcs', location: '', minQuantity: 10
-  });
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [formData, setFormData] = useState({ ...defaultItem });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchInventory();
@@ -55,32 +60,90 @@ export default function InventoryPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openAdd = () => {
+    setEditingItem(null);
+    setFormData({ ...defaultItem });
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (item: InventoryItem) => {
+    setEditingItem(item);
+    setFormData({
+      itemName: item.itemName,
+      category: item.category || '',
+      quantity: item.quantity,
+      unit: item.unit || 'pcs',
+      location: item.location || '',
+      minQuantity: item.minQuantity,
+      remarks: item.remarks || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+    setFormData({ ...defaultItem });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.itemName) return;
+    if (!formData.itemName) return;
+    
+    setSaving(true);
     
     // Auto calculate status based on quantity and minQuantity
     let status = 'in_stock';
-    if (newItem.quantity === 0) status = 'out_of_stock';
-    else if (newItem.quantity <= newItem.minQuantity) status = 'low_stock';
+    if (formData.quantity === 0) status = 'out_of_stock';
+    else if (formData.quantity <= formData.minQuantity) status = 'low_stock';
 
     try {
-      const res = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newItem, status }),
-      });
+      if (editingItem) {
+        const res = await fetch(`/api/inventory/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, status }),
+        });
 
-      if (res.ok) {
-        setNewItem({ itemName: '', category: '', quantity: 0, unit: 'pcs', location: '', minQuantity: 10 });
-        setIsCreating(false);
-        fetchInventory();
+        if (res.ok) {
+          closeModal();
+          fetchInventory();
+        } else {
+          alert('Failed to update item');
+        }
       } else {
-        alert('Failed to add item');
+        const res = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, status }),
+        });
+
+        if (res.ok) {
+          closeModal();
+          fetchInventory();
+        } else {
+          alert('Failed to add item');
+        }
       }
     } catch (error) {
       console.error(error);
-      alert('Failed to add item');
+      alert('Network error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name} from inventory?`)) return;
+    try {
+      const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setItems(prev => prev.filter(i => i.id !== id));
+      } else {
+        alert('Failed to delete item');
+      }
+    } catch {
+      alert('Network error');
     }
   };
 
@@ -101,47 +164,12 @@ export default function InventoryPage() {
           <p className="text-gray-500 mt-1">Track school supplies, assets, and reorder levels.</p>
         </div>
         <button
-          onClick={() => setIsCreating(!isCreating)}
+          onClick={openAdd}
           className="btn-primary flex items-center gap-2"
         >
-          <Plus className="w-5 h-5" /> {isCreating ? 'Cancel' : 'Add Item'}
+          <Plus className="w-5 h-5" /> Add Item
         </button>
       </div>
-
-      {isCreating && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Add New Inventory Item</h2>
-          <form onSubmit={handleCreate} className="grid md:grid-cols-3 gap-4 max-w-4xl">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
-              <input type="text" required className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.itemName} onChange={(e) => setNewItem({...newItem, itemName: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input type="text" placeholder="e.g. Stationery, Electronics" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.category} onChange={(e) => setNewItem({...newItem, category: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quantity *</label>
-              <input type="number" required min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.quantity} onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 0})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-              <input type="text" placeholder="e.g. pcs, boxes, kgs" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.unit} onChange={(e) => setNewItem({...newItem, unit: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Min. Alert Quantity</label>
-              <input type="number" min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.minQuantity} onChange={(e) => setNewItem({...newItem, minQuantity: parseInt(e.target.value) || 0})} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
-              <input type="text" placeholder="e.g. Store Room 1, Shelf B" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={newItem.location} onChange={(e) => setNewItem({...newItem, location: e.target.value})} />
-            </div>
-            <div className="md:col-span-3 pt-2">
-              <button type="submit" className="btn-primary">Save Item</button>
-            </div>
-          </form>
-        </div>
-      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -197,9 +225,14 @@ export default function InventoryPage() {
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    <button className="p-2 text-gray-400 hover:text-[#FF7A00] transition-colors rounded-lg hover:bg-orange-50">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(item)} className="p-2 text-blue-500 hover:bg-blue-50 transition-colors rounded-lg">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(item.id, item.itemName)} className="p-2 text-red-500 hover:bg-red-50 transition-colors rounded-lg">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -216,6 +249,54 @@ export default function InventoryPage() {
           </table>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-4xl shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-playfair text-xl font-bold text-[#0A1F44]">
+                {editingItem ? 'Edit Inventory Item' : 'Add New Inventory Item'}
+              </h3>
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4 max-w-4xl">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                <input type="text" required className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.itemName} onChange={(e) => setFormData({...formData, itemName: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input type="text" placeholder="e.g. Stationery, Electronics" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                <input type="number" required min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value) || 0})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <input type="text" placeholder="e.g. pcs, boxes, kgs" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Min. Alert Quantity</label>
+                <input type="number" min="0" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.minQuantity} onChange={(e) => setFormData({...formData, minQuantity: parseInt(e.target.value) || 0})} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
+                <input type="text" placeholder="e.g. Store Room 1, Shelf B" className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FF7A00]/20 focus:border-[#FF7A00]" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+              </div>
+              <div className="md:col-span-3 pt-2 flex justify-end gap-3 border-t border-gray-100 mt-4">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 px-5 py-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add Item')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

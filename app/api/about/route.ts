@@ -27,25 +27,28 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Build set object — only include photo fields if they were explicitly provided
+    const setData: any = {
+      name,
+      designation,
+      message,
+      qualifications: qualifications || null,
+      updatedAt: new Date(),
+    };
+    if (photoUrl !== undefined) setData.photoUrl = photoUrl;
+    if (photoPublicId !== undefined) setData.photoPublicId = photoPublicId;
+
     const updated = await db.insert(aboutContent).values({
       section,
       name,
       designation,
       message,
-      qualifications,
-      photoUrl,
-      photoPublicId,
+      qualifications: qualifications || null,
+      photoUrl: photoUrl || null,
+      photoPublicId: photoPublicId || null,
     }).onConflictDoUpdate({
       target: aboutContent.section,
-      set: {
-        name,
-        designation,
-        message,
-        qualifications,
-        photoUrl,
-        photoPublicId,
-        updatedAt: new Date(),
-      },
+      set: setData,
     }).returning();
 
     return NextResponse.json(updated[0]);
@@ -53,3 +56,4 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Failed to update content' }, { status: 500 });
   }
 }
+
