@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { galleryItems, galleryAlbums } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { revalidatePath } from 'next/cache';
 
 const DEFAULT_ALBUM_TITLE = '__default__';
 
@@ -71,6 +72,8 @@ export async function POST(req: Request) {
         sortOrder: 0,
       })
       .returning();
+
+    revalidatePath('/gallery');
 
     return NextResponse.json(newItem);
   } catch (error: any) {

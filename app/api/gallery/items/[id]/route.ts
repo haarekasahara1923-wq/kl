@@ -4,6 +4,7 @@ import { galleryItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { deleteFromCloudinary } from '@/lib/cloudinary';
+import { revalidatePath } from 'next/cache';
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -23,6 +24,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     // Delete from DB
     await db.delete(galleryItems).where(eq(galleryItems.id, params.id));
+
+    // Force Next.js to revalidate the public gallery page
+    revalidatePath('/gallery');
 
     // Try to delete from Cloudinary (non-blocking)
     try {
