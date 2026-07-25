@@ -4,6 +4,10 @@ import { settings as appSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
+// Force dynamic rendering — prevents Vercel from caching this route
+// as a static GET-only endpoint, which would cause PUT to return 405
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const allSettings = await db.select().from(appSettings);
