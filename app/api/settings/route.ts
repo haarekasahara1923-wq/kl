@@ -34,7 +34,7 @@ export async function PUT(req: Request) {
 
     const { settings: newSettings } = body; // Array of { key, value }
 
-    if (!Array.isArray(newSettings) || newSettings.length === 0) {
+    if (!Array.isArray(newSettings)) {
       return NextResponse.json({ error: 'Invalid payload: expected { settings: [...] }' }, { status: 400 });
     }
 
