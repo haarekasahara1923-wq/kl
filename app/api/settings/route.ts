@@ -21,10 +21,16 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Unauthorized. Only admins can modify settings.' }, { status: 401 });
     }
 
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
     const { settings: newSettings } = body; // Array of { key, value }
 
-    if (!Array.isArray(newSettings)) {
+    if (!Array.isArray(newSettings) || newSettings.length === 0) {
       return NextResponse.json({ error: 'Invalid payload: expected { settings: [...] }' }, { status: 400 });
     }
 
@@ -44,19 +50,22 @@ export async function PUT(req: Request) {
           .set({ value: setting.value ?? null, updatedAt: new Date() })
           .where(eq(settings.key, setting.key))
           .returning();
-        updated.push(res);
+        if (res) updated.push(res);
       } else {
         const [res] = await db
           .insert(settings)
           .values({ key: setting.key, value: setting.value ?? null })
           .returning();
-        updated.push(res);
+        if (res) updated.push(res);
       }
     }
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ success: true, updated });
   } catch (error: any) {
     console.error('[Settings PUT] Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to save settings' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to save settings' },
+      { status: 500 }
+    );
   }
 }

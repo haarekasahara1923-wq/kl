@@ -71,8 +71,18 @@ export default function SettingsPage() {
       if (res.ok) {
         alert('Settings saved successfully!');
       } else {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to save settings');
+        // Safely read the response — it may be empty or non-JSON
+        let errorMessage = `Server error (${res.status})`;
+        try {
+          const text = await res.text();
+          if (text) {
+            const data = JSON.parse(text);
+            errorMessage = data.error || errorMessage;
+          }
+        } catch {
+          // ignore JSON parse failure, use status-based message
+        }
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
       console.error(error);
