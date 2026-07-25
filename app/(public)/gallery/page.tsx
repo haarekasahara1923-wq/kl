@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { db } from '@/db';
-import { galleryAlbums } from '@/db/schema';
+import { galleryItems, galleryAlbums } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import GalleryPageClient from './GalleryPageClient';
 
@@ -12,15 +12,24 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function GalleryPage() {
-  let albums: any[] = [];
+  let items: any[] = [];
   try {
-    albums = await db
-      .select()
-      .from(galleryAlbums)
+    // Fetch all gallery items directly — no album filtering needed
+    items = await db
+      .select({
+        id: galleryItems.id,
+        url: galleryItems.url,
+        caption: galleryItems.caption,
+        type: galleryItems.type,
+        publicId: galleryItems.publicId,
+        createdAt: galleryItems.createdAt,
+      })
+      .from(galleryItems)
+      .innerJoin(galleryAlbums, eq(galleryItems.albumId, galleryAlbums.id))
       .where(eq(galleryAlbums.isPublished, true))
-      .orderBy(desc(galleryAlbums.createdAt));
+      .orderBy(desc(galleryItems.createdAt));
   } catch (e) {
-    console.error('[Gallery Page] Failed to load albums:', e);
+    console.error('[Gallery Page] Failed to load items:', e);
   }
-  return <GalleryPageClient albums={albums} />;
+  return <GalleryPageClient items={items} />;
 }
