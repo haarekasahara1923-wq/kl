@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { settings } from '@/db/schema';
+import { settings as appSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const allSettings = await db.select().from(settings);
+    const allSettings = await db.select().from(appSettings);
     return NextResponse.json(allSettings);
   } catch (error: any) {
     console.error('[Settings GET]', error);
@@ -24,7 +24,7 @@ export async function PUT(req: Request) {
     let body: any;
     try {
       body = await req.json();
-    } catch {
+    } catch (_e) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
@@ -39,21 +39,21 @@ export async function PUT(req: Request) {
       if (!setting.key) continue;
 
       const existing = await db
-        .select({ id: settings.id })
-        .from(settings)
-        .where(eq(settings.key, setting.key))
+        .select({ id: appSettings.id })
+        .from(appSettings)
+        .where(eq(appSettings.key, setting.key))
         .limit(1);
 
       if (existing.length > 0) {
         const [res] = await db
-          .update(settings)
+          .update(appSettings)
           .set({ value: setting.value ?? null, updatedAt: new Date() })
-          .where(eq(settings.key, setting.key))
+          .where(eq(appSettings.key, setting.key))
           .returning();
         if (res) updated.push(res);
       } else {
         const [res] = await db
-          .insert(settings)
+          .insert(appSettings)
           .values({ key: setting.key, value: setting.value ?? null })
           .returning();
         if (res) updated.push(res);
@@ -69,3 +69,4 @@ export async function PUT(req: Request) {
     );
   }
 }
+
