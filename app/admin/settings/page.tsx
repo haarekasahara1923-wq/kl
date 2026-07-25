@@ -35,18 +35,22 @@ export default function SettingsPage() {
         const data: AppSetting[] = await res.json();
         const settingsMap: Record<string, string> = {};
 
-        // Initialize with fetched data
+        // Initialize with fetched data from DB
         data.forEach(item => {
-          settingsMap[item.key] = item.value;
+          // Only store non-null values; null means not yet set
+          if (item.value != null) {
+            settingsMap[item.key] = item.value;
+          }
         });
 
-        // Fill in missing default keys
+        // Fill in defaults ONLY for keys that are completely missing from DB
         defaultSettings.forEach(ds => {
-          if (!settingsMap[ds.key]) {
+          if (settingsMap[ds.key] == null) {
             settingsMap[ds.key] = ds.defaultValue;
           }
         });
 
+        console.log('[Settings] Loaded from DB:', settingsMap);
         setSettings(settingsMap);
       }
     } catch (error) {

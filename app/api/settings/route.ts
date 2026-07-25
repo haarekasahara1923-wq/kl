@@ -10,7 +10,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const allSettings = await db.select().from(appSettings);
-    return NextResponse.json(allSettings);
+    console.log('[Settings GET] returning', allSettings.length, 'rows:', JSON.stringify(allSettings.map(s => ({ key: s.key, value: s.value }))));
+    return NextResponse.json(allSettings, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      },
+    });
   } catch (error: any) {
     console.error('[Settings GET] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -24,7 +29,6 @@ export async function PUT(req: Request) {
     console.log('[Settings PUT] session:', JSON.stringify({
       exists: !!session,
       role: (session?.user as any)?.role ?? 'none',
-      email: session?.user?.email ?? 'none',
     }));
 
     if (!session || (session.user as any).role !== 'admin') {
@@ -79,19 +83,20 @@ export async function PUT(req: Request) {
           .set({ value: setting.value ?? null, updatedAt: new Date() })
           .where(eq(appSettings.key, setting.key))
           .returning();
-        console.log(`[Settings PUT] Updated key="${setting.key}":`, !!res);
+        console.log(`[Settings PUT] Updated key="${setting.key}" result:`, JSON.stringify(res));
         if (res) updated.push(res);
       } else {
         const [res] = await db
           .insert(appSettings)
           .values({ key: setting.key, value: setting.value ?? null })
           .returning();
-        console.log(`[Settings PUT] Inserted key="${setting.key}":`, !!res);
+        console.log(`[Settings PUT] Inserted key="${setting.key}" result:`, JSON.stringify(res));
         if (res) updated.push(res);
       }
     }
 
     console.log('[Settings PUT] Done. Total updated/inserted:', updated.length);
+    console.log('[Settings PUT] Final updated values:', JSON.stringify(updated.map(u => ({ key: u.key, value: u.value }))));
     return NextResponse.json({ success: true, updated });
 
   } catch (error: any) {
